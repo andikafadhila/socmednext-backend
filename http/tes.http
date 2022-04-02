@@ -1,0 +1,113 @@
+POST http://localhost:5000/file HTTP/1.1
+Content-Type: application/json
+
+{
+    "kata":"mau nulis apa aja"
+}
+
+###
+DELETE  http://localhost:5000/product/2 HTTP/1.1
+Content-Type: application/json
+
+###
+POST http://localhost:5000/product HTTP/1.1
+Content-Type: application/json
+
+{
+    "name": "shuriken minato",
+    "price": 200000
+}
+
+### update products 
+PUT  http://localhost:5000/product/1 HTTP/1.1
+Content-Type: application/json
+
+{
+    "name":"palu thor aja deh",
+    "price": 150000
+}
+
+###
+
+POST http://localhost:5000/seq/product HTTP/1.1
+Content-Type: application/json
+
+{
+    "name":"maple ebony",
+    "price":150000,
+    "description":"mantap dah"
+}
+
+###
+
+POST http://localhost:5000/seq/variaties HTTP/1.1
+Content-Type: application/json
+
+{
+    "name":"kayu aja",
+    "color":"merah abu",
+    "images":["bla","bla"],
+    "product_id":2
+}
+### axios.post(url,{},config)
+### axios.get(url,config)
+# mongo db 
+###
+POST http://localhost:5000/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+    "username":"DIKA",
+    "password":"abc12345",
+    "email":"dika@gmail.com"
+}
+
+###
+POST http://localhost:5000/post/623d3d5330eef5758a906985 HTTP/1.1
+Content-Type: application/json
+
+{
+    "content":"DIKAsss",
+    "image":"abc12345"
+}
+
+
+####
+POST http://localhost:5000/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+    "username":"dikaganteng11",
+    "email":"dika11@gmail.com",
+    "password":"sipalingtampan"
+}
+
+####
+POST http://localhost:5000/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+    "username":"dikaganteng112",
+    "email":"dinopwdk@gmail.com",
+    "password":"sipalingtampan"
+}
+
+####
+POST http://localhost:5000/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+    "username":"dikamacho",
+    "email":"andikarizkifadhila@gmail.com",
+    "password":"sipalingtampan"
+}
+###
+
+POST http://localhost:5000/auth/sendemail-verified HTTP/1.1
+Content-Type: application/json
+
+{
+    "id":6,
+    "username":"dikamacho",
+    "email":"dinopwdk@gmail.com"
+}
