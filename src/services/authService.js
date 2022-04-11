@@ -1,7 +1,34 @@
 const { dbCon } = require("../connections");
 const hashPass = require("../lib/hashPass");
-// login Service
 
+// login Service
+const loginService = async (data) => {
+  let { username, email, password } = data;
+  let conn;
+  let sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    password = hashPass(password);
+
+    sql = `SELECT id,username,isVerified,email FROM users WHERE (username = ? or email = ?) and password = ?`;
+    let [result] = await conn.query(sql, [username, email, password]);
+
+    console.log(result);
+
+    if (!result.length) {
+      throw { message: "User not found." };
+    }
+
+    conn.release();
+    return { success: true, data: result[0] };
+  } catch (error) {
+    conn.release();
+    console.log(error);
+    throw new Error(error.message || error);
+  }
+};
 // login Service
 
 // register Service
@@ -23,7 +50,7 @@ const registerService = async (data) => {
 
     let [result] = await conn.query(sql, [username, email]);
     if (result.length) {
-      throw { message: "your username or password has been used" };
+      throw { message: "your username has been used" };
     }
 
     sql = `INSERT INTO users set ?`;
@@ -56,6 +83,6 @@ const registerService = async (data) => {
 // register Service
 
 module.exports = {
-  // loginService,
+  loginService,
   registerService,
 };

@@ -4,7 +4,7 @@ const app = express();
 const cors = require("cors");
 const port = 5000;
 const { dbCon } = require("./src/connections");
-const { authRoutes } = require("./src/routes");
+const { authRoutes, postsRoutes, editRoutes } = require("./src/routes");
 
 const logMiddleware = (req, res, next) => {
   console.log(req.method, req.url, new Date().toString());
@@ -23,6 +23,8 @@ app.use(logMiddleware);
 app.use(express.static("public"));
 
 app.use("/auth", authRoutes);
+app.use("/post", postsRoutes);
+app.use("/edit", editRoutes);
 
 app.get("/", (req, res) => {
   res

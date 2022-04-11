@@ -77,8 +77,8 @@ POST http://localhost:5000/auth/register HTTP/1.1
 Content-Type: application/json
 
 {
-    "username":"dikaganteng11",
-    "email":"dika11@gmail.com",
+    "username":"dikaganteng1111",
+    "email":"andikarfadhila@gmail.com",
     "password":"sipalingtampan"
 }
 
@@ -88,18 +88,17 @@ Content-Type: application/json
 
 {
     "username":"dikaganteng112",
-    "email":"dinopwdk@gmail.com",
+    "email":"andika_fadhila97@yahoo.com",
     "password":"sipalingtampan"
 }
 
 ####
-POST http://localhost:5000/auth/register HTTP/1.1
+GET http://localhost:5000/auth/verified HTTP/1.1
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzksInVzZXJuYW1lIjoiZGlrYWdhbnRlbmcxMTExIiwidGltZUNyZWF0ZWQiOjE2NDk0MTA0NDg4NjMsImlhdCI6MTY0OTQxMDQ0OCwiZXhwIjoxNjQ5NDE3NjQ4fQ.fAPRAhYDceaXjZ2Ju3NqbdIMyXTTaJe4P06j69xMLuU
 
 {
-    "username":"dikamacho",
-    "email":"andikarizkifadhila@gmail.com",
-    "password":"sipalingtampan"
+    "id" : 39
 }
 ###
 
@@ -109,5 +108,23 @@ Content-Type: application/json
 {
     "id":6,
     "username":"dikamacho",
-    "email":"dinopwdk@gmail.com"
+    "email":"andikarizkifadhila@gmail.com"
+}
+
+###
+
+POST http://localhost:5000/post/posting HTTP/1.1
+Content-Type:  application/json
+
+{
+    "id" : 6,
+    "caption" : "a"
+}
+###
+
+GET  http://localhost:5000/auth/getusername HTTP/1.1
+Content-Type:  application/json
+
+{
+    "username": "dikamacho"
 }
