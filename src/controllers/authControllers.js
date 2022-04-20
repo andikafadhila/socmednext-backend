@@ -121,7 +121,7 @@ const keeplogin = async (req, res) => {
   let sql;
   try {
     conn = await dbCon.promise();
-    sql = `SELECT id,username,isVerified,email FROM users where id = ?`;
+    sql = `SELECT * FROM users where id = ?`;
     let [result] = await conn.query(sql, id);
     return res.status(200).send(result[0]);
   } catch (error) {

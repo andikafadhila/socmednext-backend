@@ -1,6 +1,5 @@
 const { dbCon } = require("./../connections");
-const sharp = require("sharp");
-const { v4: uuid } = require("uuid");
+const fs = require("fs");
 
 const MIME_TYPE_MAP = {
   "image/png": "png",
@@ -9,16 +8,30 @@ const MIME_TYPE_MAP = {
 };
 
 const updateBio = async (req, res) => {
-  const { bio } = req.body;
+  const { bio, fullname, username } = req.body;
   const { id } = req.user;
   let conn, sql;
 
   try {
-    conn = await dbCon.promise();
-    sql = `UPDATE users set bio = ? WHERE id = ?`;
-    let [result] = await conn.query(sql, [bio, id]);
+    conn = await dbCon.promise().getConnection();
+
+    sql = `SELECT username FROM users WHERE username = ? AND id != ?`;
+    let [resultUser] = await conn.query(sql, [username, id]);
+
+    if (resultUser.length) {
+      throw { message: "username already registered!" };
+    }
+
+    sql = `UPDATE users SET ? WHERE id = ?`;
+    const editData = {
+      bio: bio,
+      fullname: fullname,
+      username: username,
+    };
+    let [result] = await conn.query(sql, [editData, id]);
+    conn.commit();
     conn.release();
-    return res.status(200).send(result[0]);
+    return res.status(200).send({ message: "success change profile data" });
   } catch (error) {
     conn.release();
     console.log(error);
@@ -26,32 +39,84 @@ const updateBio = async (req, res) => {
   }
 };
 
+// get username except user
+const getusernameexceptuser = async (req, res, next) => {
+  const { username, id } = req.body;
+  // const { id } = req.user;
+
+  let conn, sql;
+
+  conn = await dbCon.promise();
+  sql = `SELECT username FROM users WHERE username = ? AND id != ?`;
+  let [result] = await conn.query(sql, [username, id]);
+  console.log(result);
+  if (result.length) {
+    res.send({ exists: result });
+    next();
+  } else {
+    return res.status(200).send(result[0]);
+  }
+};
+
+// update avatar
 const updateProfilePicture = async (req, res) => {
   let conn, sql;
   const { id } = req.user;
+
+  let path = "/avatar";
+  const imagePath = req.file ? `${path}/${req.file.filename}` : null;
+  console.log(imagePath);
+  if (!imagePath) {
+    return res.status(500).send({ message: "foto tidak ada" });
+  }
+
+  console.log(req.file);
+
   try {
     conn = await dbCon.promise();
-    if (!MIME_TYPE_MAP[req.file.mimetype])
-      throw new HttpError("Invalid mimetype", 400);
-
-    const folder = "uploads/images/";
-    const name = uuid() + "." + "jpeg";
-    const path = folder + name;
-
-    const image = sharp(req.file.buffer);
-
-    await image.toFormat("jpeg").jpeg({ quality: 80 }).toFile(path);
-    sql = `UPDATE users set bio = ? WHERE id = ?`;
-    let [result] = await conn.query(sql, [bio, id]);
-    return res.status(200).send(result[0]);
-
-    Promise.all;
+    // select data user dulu untuk dapetin path lamanya
+    sql = `UPDATE users SET profilepic = ? WHERE id = ?`;
+    let [result] = await conn.query(sql, [imagePath, id]);
+    console.log(result);
+    fs.unlinkSync;
+    // if(imagePath){
+    //   ./public + result[0].pro
+    // }
+    return res.status(200).send({ message: "berhasil di upload" });
   } catch (error) {
-    return next(e);
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+// delete avatar
+const deleteProfilePicture = async (req, res) => {
+  let conn, sql;
+  const { id } = req.user;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `SELECT profilepic FROM users WHERE id = ?`;
+    let [haveProfilepic] = await conn.query(sql, id);
+
+    if (haveProfilepic) {
+      throw { message: "you already dont have an avatar!" };
+    }
+
+    sql = `UPDATE users SET profilepic = null WHERE id = ?`;
+    let [result] = await conn.query(sql, [id]);
+    console.log(result);
+    return res.status(200).send({ message: "Avatar deleted!" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
   }
 };
 
 module.exports = {
   updateBio,
   updateProfilePicture,
+  getusernameexceptuser,
+  deleteProfilePicture,
 };

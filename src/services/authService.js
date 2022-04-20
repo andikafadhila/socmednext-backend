@@ -12,7 +12,7 @@ const loginService = async (data) => {
 
     password = hashPass(password);
 
-    sql = `SELECT id,username,isVerified,email FROM users WHERE (username = ? or email = ?) and password = ?`;
+    sql = `SELECT * FROM users WHERE (username = ? or email = ?) and password = ?`;
     let [result] = await conn.query(sql, [username, email, password]);
 
     console.log(result);
