@@ -145,9 +145,18 @@ const getpost = async (req, res) => {
 
   try {
     conn = await dbCon.promise().getConnection();
-    sql = `select caption,username,users_id,profilepic from posts INNER JOIN users ON posts.users_id = users.id`;
+    sql = `select posts.id,caption,username,users_id,profilepic from posts INNER JOIN users ON posts.users_id = users.id`;
 
     let [result] = await conn.query(sql);
+    sql = `SELECT * FROM posts_images WHERE posts_id = ?`;
+
+    for (let i = 0; i < result.length; i++) {
+      const element = result[i];
+      const [resultImage] = await conn.query(sql, element.id);
+      console.log("ini resultImage", resultImage);
+      result[i] = { ...result[i], photos: resultImage };
+    }
+    console.log("iniresult", result);
     conn.release();
     return res.status(200).send(result);
   } catch (error) {
