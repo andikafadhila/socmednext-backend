@@ -16,6 +16,7 @@ const logMiddleware = (req, res, next) => {
   next();
 };
 
+// nanti maximumnya taro x-total-count
 app.use(
   cors({
     exposedHeaders: ["x-total-count", "x-token-access"],

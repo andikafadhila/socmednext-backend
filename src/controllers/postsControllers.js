@@ -142,22 +142,42 @@ const posting = async (req, res) => {
 // get all post
 const getpost = async (req, res) => {
   let conn, sql;
+  let { page, limit } = req.query;
 
+  // initialize offSet limit
+  if (!page) {
+    page = 0;
+  }
+  if (!limit) {
+    limit = 10;
+  }
+  let offset = page * limit;
+
+  // jadiin INT
+  limit = parseInt(limit);
   try {
     conn = await dbCon.promise().getConnection();
-    sql = `select posts.id,caption,username,users_id,profilepic from posts INNER JOIN users ON posts.users_id = users.id`;
-
+    // ini ngeGet table posts && users && likes && kasih limit
+    sql = `select posts.id,caption,username,users_id,profilepic, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
+      offset
+    )}, ${dbCon.escape(limit)}`;
     let [result] = await conn.query(sql);
-    sql = `SELECT * FROM posts_images WHERE posts_id = ?`;
 
+    sql = `SELECT * FROM posts_images WHERE posts_id = ?`;
     for (let i = 0; i < result.length; i++) {
       const element = result[i];
       const [resultImage] = await conn.query(sql, element.id);
+
       console.log("ini resultImage", resultImage);
       result[i] = { ...result[i], photos: resultImage };
     }
+
+    sql = `SELECT COUNT(*) as total_posts FROM posts`;
+    let [totalPosts] = await conn.query(sql);
+
     console.log("iniresult", result);
     conn.release();
+    res.set("x-total-count", totalPosts[0].total_posts);
     return res.status(200).send(result);
   } catch (error) {
     return res.status(500).send({ message: error.message || error });
