@@ -7,8 +7,11 @@ const postImage = async (req, res) => {
   const { id } = req.user;
 
   console.log("ini req.files", req.files);
+  console.log("ini req.body", req.body);
+  const { caption } = req.body;
   const { image } = req.files;
   console.log("image", image);
+  console.log("caption", caption);
   const imagearrpath = image
     ? image.map((val) => {
         return `${jalur}/${val.filename}`;
@@ -18,29 +21,39 @@ const postImage = async (req, res) => {
   console.log("ini imagearrpath", imagearrpath);
 
   // const imagePath = req.file ? `${path}/${req.file.filename}` : null;
-  if (!imagearrpath) {
+  if (!image) {
     return res.status(500).send({ message: "foto tidak ada" });
   }
 
   try {
-    conn = await dbCon.promise();
+    conn = await dbCon.promise().getConnection();
 
+    await conn.beginTransaction();
     // insert into posts table
+    sql = `INSERT INTO posts SET ?`;
+    let datacaption = {
+      caption: caption,
+      users_id: id,
+    };
+    let [result] = await conn.query(sql, datacaption);
+    console.log(result.insertId);
+
+    let posts_id = result.insertId;
+    // console.log("posts_id", posts_id);
 
     // insert into  posts_images
     sql = `INSERT INTO posts_images set ?`;
 
     for (let i = 0; i < imagearrpath.length; i++) {
-      let val = imagearrpath[i];
       let insertDataImage = {
-        image: imagearrpath,
+        image: imagearrpath[i],
+        posts_id: posts_id,
       };
       await conn.query(sql, insertDataImage);
     }
 
-    // sql = `UPDATE users SET profilepic = ? WHERE id = ?`;
-    // let [result] = await conn.query(sql, [imagePath, id]);
-    // console.log(result);
+    conn.commit();
+    conn.release();
     return res.status(200).send({ message: "berhasil di upload" });
   } catch (error) {
     console.log(error);

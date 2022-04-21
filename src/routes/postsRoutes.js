@@ -10,12 +10,12 @@ const {
 
 const upload = require("../lib/upload");
 const uploader = upload("/image", "POSTIMAGE").fields([
-  { name: "image", maxCount: 4 },
+  { name: "image", maxCount: 3 },
 ]);
 
 Router.post("/posting", verifyTokenAccess, posting);
 Router.delete("/delete-post", verifyTokenAccess, deletepost);
 Router.get("/get-post", getpost);
-Router.post("/", uploader, verifyTokenAccess, postImage);
+Router.post("/", verifyTokenAccess, uploader, postImage);
 
 module.exports = Router;
