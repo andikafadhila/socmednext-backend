@@ -18,6 +18,10 @@ const getUser = async (req, res) => {
   }
 };
 
+// const getUserbyId = async(req,res) => {
+//   const {}
+// }
+
 module.exports = {
   getUser,
 };

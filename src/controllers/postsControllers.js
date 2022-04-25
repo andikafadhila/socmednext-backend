@@ -1,6 +1,6 @@
 const { dbCon } = require("../connections");
 
-// add image
+// postImage and caption
 const postImage = async (req, res) => {
   let conn, sql;
   let jalur = "/image";
@@ -20,7 +20,6 @@ const postImage = async (req, res) => {
 
   console.log("ini imagearrpath", imagearrpath);
 
-  // const imagePath = req.file ? `${path}/${req.file.filename}` : null;
   if (!image) {
     return res.status(500).send({ message: "foto tidak ada" });
   }
@@ -65,80 +64,6 @@ const postImage = async (req, res) => {
   }
 };
 
-// create a post
-// const posting = async (req, res) => {
-//   const { id, caption, image } = req.body;
-//   let conn;
-//   let sql;
-//   console.log(req.body);
-//   console.log(req.user);
-//   console.log(req.files);
-
-//   try {
-//     conn = await dbCon.promise().getConnection();
-
-//     sql = `INSERT INTO posts SET ?`;
-//     let insertData = {
-//       users_id: id,
-//       caption: caption,
-//     };
-//     let [captionData] = await conn.query(sql, insertData);
-
-//     sql = `INSERT INTO post_images set ?`;
-
-//     for (let i = 0; i < image.length; i++) {
-//       let val = image[i];
-//       let insertDataImage = {
-//         posts_id: val.postsid,
-//         image: image,
-//       };
-//       await conn.query(sql, insertDataImage);
-//     }
-//     await conn.commit();
-//     conn.release();
-//     return res.status(200).send({ message: "Posting Successfull" });
-//   } catch (error) {
-//     return res.status(500).send({ message: error.message || error });
-//   }
-// };
-
-const posting = async (req, res) => {
-  const { caption } = req.body;
-  const { id } = req.user;
-  let conn;
-  let sql;
-  console.log(req.body);
-  console.log(req.user);
-  console.log(req.files);
-
-  try {
-    conn = await dbCon.promise().getConnection();
-
-    sql = `INSERT INTO posts SET ?`;
-    let insertData = {
-      users_id: id,
-      caption: caption,
-    };
-    let [captionData] = await conn.query(sql, insertData);
-
-    sql = `INSERT INTO post_images set ?`;
-
-    for (let i = 0; i < image.length; i++) {
-      let val = image[i];
-      let insertDataImage = {
-        posts_id: val.postsid,
-        image: image,
-      };
-      await conn.query(sql, insertDataImage);
-    }
-    await conn.commit();
-    conn.release();
-    return res.status(200).send({ message: "Posting Successfull" });
-  } catch (error) {
-    return res.status(500).send({ message: error.message || error });
-  }
-};
-
 // get all post
 const getpost = async (req, res) => {
   let conn, sql;
@@ -158,11 +83,12 @@ const getpost = async (req, res) => {
   try {
     conn = await dbCon.promise().getConnection();
     // ini ngeGet table posts && users && likes && kasih limit
-    sql = `select posts.id,caption,username,users_id,profilepic, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
+    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
       offset
     )}, ${dbCon.escape(limit)}`;
     let [result] = await conn.query(sql);
 
+    // ini ngeloop image yang di upload
     sql = `SELECT * FROM posts_images WHERE posts_id = ?`;
     for (let i = 0; i < result.length; i++) {
       const element = result[i];
@@ -172,6 +98,7 @@ const getpost = async (req, res) => {
       result[i] = { ...result[i], photos: resultImage };
     }
 
+    // total posts
     sql = `SELECT COUNT(*) as total_posts FROM posts`;
     let [totalPosts] = await conn.query(sql);
 
@@ -213,15 +140,6 @@ const deletepost = async (req, res) => {
 };
 
 // like a post
-// const likeAPost = async (req,res) => {
-//   const {}
-
-//   try {
-
-//   } catch (error) {
-//     return res.status(500).send({ message: error.message || error });
-//   }
-// }
 
 // unlike a post
 
@@ -233,7 +151,6 @@ const deletepost = async (req, res) => {
 
 module.exports = {
   postImage,
-  posting,
   getpost,
   getPostById,
   deletepost,
