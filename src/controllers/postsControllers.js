@@ -83,7 +83,7 @@ const getpost = async (req, res) => {
   try {
     conn = await dbCon.promise().getConnection();
     // ini ngeGet table posts && users && likes && kasih limit
-    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
+    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, if(id_like is null, 0, 1) as udah_like, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id LEFT JOIN (SELECT id as id_like, posts_id FROM likes WHERE users_id = 39) as l ON posts.id = l.posts_id ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
       offset
     )}, ${dbCon.escape(limit)}`;
     let [result] = await conn.query(sql);
@@ -129,6 +129,8 @@ const getPostById = async (req, res) => {
 // delete post
 const deletepost = async (req, res) => {
   const { id } = req.user;
+  const { id: posts_id } = req.params;
+
   try {
     sql = `DELETE FROM posts WHERE id = ?`;
     conn.query(sql, id);
@@ -140,8 +142,41 @@ const deletepost = async (req, res) => {
 };
 
 // like a post
+const likepost = async (req, res) => {
+  let sql, conn;
+  let { id } = req.user;
+  let { posts_id } = req.query;
+  posts_id = parseInt(posts_id);
+  console.log("id", id);
+  console.log("posts_id", posts_id);
+  console.log("req.query", req.query);
 
-// unlike a post
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    // cek udah di like apa blom post nya
+    sql = `SELECT * FROM posts INNER JOIN likes ON likes.posts_id = posts.id WHERE posts.id = ? AND likes.users_id = ?`;
+    const [resultLiked] = await conn.query(sql, [posts_id, id]);
+    if (resultLiked.length) {
+      sql = `DELETE FROM likes WHERE posts_id = ? AND users_id = ?`;
+      const [deleteResult] = await conn.query(sql, [posts_id, id]);
+      conn.release();
+      return res.status(200).send({ message: "Unliked!" });
+    }
+
+    sql = `INSERT INTO likes set ?`;
+    let inputData = {
+      posts_id,
+      users_id: id,
+    };
+
+    const [resultLike] = await conn.query(sql, inputData);
+    conn.release();
+    return res.status(200).send({ message: "Liked!" }, resultLike);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
 
 // get all like of a post
 
@@ -154,4 +189,5 @@ module.exports = {
   getpost,
   getPostById,
   deletepost,
+  likepost,
 };

@@ -5,6 +5,7 @@ const {
   getpost,
   postImage,
   deletepost,
+  likepost,
 } = require("../controllers/postsControllers");
 
 const upload = require("../lib/upload");
@@ -15,5 +16,6 @@ const uploader = upload("/image", "POSTIMAGE").fields([
 Router.delete("/delete-post", verifyTokenAccess, deletepost);
 Router.get("/get-post", getpost);
 Router.post("/", verifyTokenAccess, uploader, postImage);
+Router.post("/like-post", verifyTokenAccess, likepost);
 
 module.exports = Router;
