@@ -67,6 +67,7 @@ const postImage = async (req, res) => {
 // get all post
 const getpost = async (req, res) => {
   let conn, sql;
+  let { id } = req.user;
   let { page, limit } = req.query;
 
   // initialize offSet limit
@@ -83,7 +84,7 @@ const getpost = async (req, res) => {
   try {
     conn = await dbCon.promise().getConnection();
     // ini ngeGet table posts && users && likes && kasih limit
-    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, if(id_like is null, 0, 1) as udah_like, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id LEFT JOIN (SELECT id as id_like, posts_id FROM likes WHERE users_id = 39) as l ON posts.id = l.posts_id ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
+    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, if(id_like is null, 0, 1) as udah_like, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id LEFT JOIN (SELECT id as id_like, posts_id FROM likes WHERE users_id = ${id}) as l ON posts.id = l.posts_id ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
       offset
     )}, ${dbCon.escape(limit)}`;
     let [result] = await conn.query(sql);
@@ -96,6 +97,16 @@ const getpost = async (req, res) => {
 
       console.log("ini resultImage", resultImage);
       result[i] = { ...result[i], photos: resultImage };
+    }
+
+    //ini ngeloop comment yang di post
+    sql = `SELECT * FROM comments WHERE posts_id = ?`;
+    for (let i = 0; i < result.length; i++) {
+      const element = result[i];
+      const [resultComments] = await conn.query(sql, element.id);
+
+      console.log("ini resultComments", resultComments);
+      result[i] = { ...result[i], comments: resultComments };
     }
 
     // total posts
@@ -116,6 +127,8 @@ const getPostById = async (req, res) => {
   const { users_id } = req.body;
 
   try {
+    conn = await dbCon.promise().getConnection();
+
     sql = `SELECT * FROM posts WHERE id = ?`;
     let [result] = await conn.query(sql, users_id);
 
@@ -132,6 +145,7 @@ const deletepost = async (req, res) => {
   const { id: posts_id } = req.params;
 
   try {
+    conn = await dbCon.promise().getConnection();
     sql = `DELETE FROM posts WHERE id = ?`;
     conn.query(sql, id);
     conn.release();
@@ -178,11 +192,49 @@ const likepost = async (req, res) => {
   }
 };
 
-// get all like of a post
-
 // create a comment
+const commentpost = async (req, res) => {
+  let conn, sql;
+  const { id } = req.user;
+  const { comment } = req.body;
+  const { posts_id } = req.query;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `INSERT INTO comments set ?`;
+    let inputComments = {
+      users_id: id,
+      comment,
+      posts_id,
+    };
+
+    const [result] = await conn.query(sql, inputComments);
+    conn.release();
+    return res.status(200).send({ message: "comment successful" }, result);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
 
 // delete a comment
+const deletecommentpost = async (req, res) => {
+  let conn, sql;
+  const { id: users_id } = req.user;
+  const { id } = req.query;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `DELETE FROM comments where id = ? AND users_id = ?`;
+    const [result] = await conn.query(sql, [id, users_id]);
+
+    conn.release();
+    return res.status(200).send({ message: "comment deleted" });
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
 
 module.exports = {
   postImage,
@@ -190,4 +242,6 @@ module.exports = {
   getPostById,
   deletepost,
   likepost,
+  commentpost,
+  deletecommentpost,
 };
