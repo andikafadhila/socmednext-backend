@@ -8,6 +8,7 @@ const {
   likepost,
   commentpost,
   deletecommentpost,
+  cek,
 } = require("../controllers/postsControllers");
 
 const upload = require("../lib/upload");
@@ -20,6 +21,8 @@ Router.get("/get-post", verifyTokenAccess, getpost);
 Router.post("/", verifyTokenAccess, uploader, postImage);
 Router.post("/like-post", verifyTokenAccess, likepost);
 Router.post("/comment-post", verifyTokenAccess, commentpost);
-Router.post("/delete-comment-post", verifyTokenAccess, deletecommentpost);
+Router.delete("/delete-comment-post", verifyTokenAccess, deletecommentpost);
+Router.delete("/delete-post", verifyTokenAccess, deletepost);
+Router.get("/cek", verifyTokenAccess, cek);
 
 module.exports = Router;

@@ -1,4 +1,5 @@
 const { dbCon } = require("../connections");
+const fs = require("fs");
 
 // postImage and caption
 const postImage = async (req, res) => {
@@ -56,9 +57,12 @@ const postImage = async (req, res) => {
     return res.status(200).send({ message: "berhasil di upload" });
   } catch (error) {
     console.log(error);
-    if (imagePath) {
+    conn.rollback();
+    if (imagearrpath) {
       // klo foto sudah terupload dan sql ggaal maka fotonya dihapus
-      fs.unlinkSync("./public" + imagePath);
+      for (let i = 0; i < imagearrpath.length; i++) {
+        fs.unlinkSync("./public" + imagearrpath[i]);
+      }
     }
     return res.status(500).send({ message: error.message || error });
   }
@@ -139,18 +143,64 @@ const getPostById = async (req, res) => {
   }
 };
 
-// delete post
-const deletepost = async (req, res) => {
+// cek
+
+const cek = async (req, res) => {
   const { id } = req.user;
-  const { id: posts_id } = req.params;
+  const { posts_id } = req.query;
 
   try {
     conn = await dbCon.promise().getConnection();
-    sql = `DELETE FROM posts WHERE id = ?`;
-    conn.query(sql, id);
+
+    sql = `SELECT * FROM posts_images WHERE posts_id = ?`;
+    const [result] = await conn.query(sql, posts_id);
+    console.log(result);
     conn.release();
+    return res.status(200).send(result);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+// delete post
+const deletepost = async (req, res) => {
+  const { id } = req.user;
+  const { posts_id } = req.query;
+  //post id nya, image nya, comment nya, like nya
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    sql = `SELECT * FROM posts_images WHERE posts_id = ?`;
+    const [result] = await conn.query(sql, posts_id);
+
+    sql = `DELETE FROM comments WHERE posts_id = ?`;
+    await conn.query(sql, posts_id);
+
+    sql = `DELETE FROM likes WHERE posts_id = ?`;
+    await conn.query(sql, posts_id);
+
+    sql = `DELETE FROM posts_images WHERE posts_id = ?`;
+    await conn.query(sql, posts_id);
+
+    // delete posts
+    sql = `DELETE FROM posts WHERE id = ?`;
+    await conn.query(sql, posts_id);
+
+    if (result.length) {
+      for (let i = 0; i < result.length; i++) {
+        fs.unlinkSync("./public" + result[i].image);
+      }
+    }
+
+    conn.release();
+    conn.commit();
     return res.status(200).send({ message: "successfull to delete post" });
   } catch (error) {
+    conn.rollback();
+    conn.release();
+    console.log(error);
     return res.status(500).send({ message: error.message || error });
   }
 };
@@ -244,4 +294,5 @@ module.exports = {
   likepost,
   commentpost,
   deletecommentpost,
+  cek,
 };
