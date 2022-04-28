@@ -128,16 +128,57 @@ const getpost = async (req, res) => {
 
 // get post by id
 const getPostById = async (req, res) => {
-  const { users_id } = req.body;
+  let conn, sql;
+  let { id } = req.user;
+  let { page, limit } = req.query;
 
+  // initialize offSet limit
+  if (!page) {
+    page = 0;
+  }
+  if (!limit) {
+    limit = 10;
+  }
+  let offset = page * limit;
+
+  // jadiin INT
+  limit = parseInt(limit);
   try {
     conn = await dbCon.promise().getConnection();
+    // ini ngeGet table posts && users && likes && kasih limit
+    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, if(id_like is null, 0, 1) as udah_like, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id LEFT JOIN (SELECT id as id_like, posts_id FROM likes WHERE users_id = ${id}) as l ON posts.id = l.posts_id WHERE = ${id} ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
+      offset
+    )}, ${dbCon.escape(limit)}`;
+    let [result] = await conn.query(sql);
 
-    sql = `SELECT * FROM posts WHERE id = ?`;
-    let [result] = await conn.query(sql, users_id);
+    // ini ngeloop image yang di upload
+    sql = `SELECT * FROM posts_images WHERE posts_id = ?`;
+    for (let i = 0; i < result.length; i++) {
+      const element = result[i];
+      const [resultImage] = await conn.query(sql, element.id);
 
+      console.log("ini resultImage", resultImage);
+      result[i] = { ...result[i], photos: resultImage };
+    }
+
+    //ini ngeloop comment yang di post
+    sql = `SELECT * FROM comments WHERE posts_id = ?`;
+    for (let i = 0; i < result.length; i++) {
+      const element = result[i];
+      const [resultComments] = await conn.query(sql, element.id);
+
+      console.log("ini resultComments", resultComments);
+      result[i] = { ...result[i], comments: resultComments };
+    }
+
+    // total posts
+    sql = `SELECT COUNT(*) as total_posts FROM posts`;
+    let [totalPosts] = await conn.query(sql);
+
+    console.log("iniresult", result);
     conn.release();
-    return res.status(200).send(result[0]);
+    res.set("x-total-count", totalPosts[0].total_posts);
+    return res.status(200).send(result);
   } catch (error) {
     return res.status(500).send({ message: error.message || error });
   }
@@ -184,7 +225,7 @@ const deletepost = async (req, res) => {
     sql = `DELETE FROM posts_images WHERE posts_id = ?`;
     await conn.query(sql, posts_id);
 
-    // delete posts
+    // delete postsnya belakangan
     sql = `DELETE FROM posts WHERE id = ?`;
     await conn.query(sql, posts_id);
 
@@ -286,6 +327,70 @@ const deletecommentpost = async (req, res) => {
   }
 };
 
+//edit comment
+const editcomment = async (req, res) => {
+  let conn, sql;
+  const { id } = req.user;
+  const { comment } = req.body;
+  const { id_posts, id: comments_id } = req.query;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `SELECT * FROM comments WHERE users_id = ? AND posts_id = ? AND id = ?`;
+    const [resultcomments] = await conn.query(sql, [id, id_posts, comments_id]);
+
+    if (!resultcomments.length) {
+      throw { message: "ini bukan comment anda!" };
+    }
+
+    sql = `UPDATE comments set ? WHERE posts_id = ? AND id = ?`;
+    let inputComment = {
+      comment,
+    };
+    const [result] = await conn.query(sql, [
+      inputComment,
+      id_posts,
+      comments_id,
+    ]);
+    conn.release();
+    return res.status(200).send(result);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+// editpost
+const editpost = async (req, res) => {
+  let conn, sql;
+  const { id } = req.user;
+  const { caption } = req.body;
+  const { id_posts } = req.query;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `SELECT * FROM posts WHERE users_id = ? AND id = ?`;
+    const [resultPost] = await conn.query(sql, [id, id_posts]);
+
+    if (!resultPost.length) {
+      throw { message: "ini bukan post anda!" };
+    }
+
+    sql = `UPDATE post set ? WHERE id = ?`;
+    let inputCaption = {
+      caption,
+    };
+    const [result] = await conn.query(sql, [inputCaption, id_posts]);
+    conn.release();
+    return res.status(200).send(result);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   postImage,
   getpost,
@@ -295,4 +400,6 @@ module.exports = {
   commentpost,
   deletecommentpost,
   cek,
+  editcomment,
+  editpost,
 };
