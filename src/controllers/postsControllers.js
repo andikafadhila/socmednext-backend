@@ -104,7 +104,7 @@ const getpost = async (req, res) => {
     }
 
     //ini ngeloop comment yang di post
-    sql = `SELECT * FROM comments WHERE posts_id = ?`;
+    sql = `SELECT comment,posts_id, users_id, comments.createdAt, username, profilepic FROM comments JOIN users ON users_id = users.id WHERE posts_id = ?`;
     for (let i = 0; i < result.length; i++) {
       const element = result[i];
       const [resultComments] = await conn.query(sql, element.id);
@@ -126,7 +126,7 @@ const getpost = async (req, res) => {
   }
 };
 
-// get post by id
+// get post by User id
 const getPostById = async (req, res) => {
   let conn, sql;
   let { id } = req.user;
@@ -146,7 +146,7 @@ const getPostById = async (req, res) => {
   try {
     conn = await dbCon.promise().getConnection();
     // ini ngeGet table posts && users && likes && kasih limit
-    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, if(id_like is null, 0, 1) as udah_like, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id LEFT JOIN (SELECT id as id_like, posts_id FROM likes WHERE users_id = ${id}) as l ON posts.id = l.posts_id WHERE = ${id} ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
+    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, if(id_like is null, 0, 1) as udah_like, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id LEFT JOIN (SELECT id as id_like, posts_id FROM likes WHERE users_id = ${id}) as l ON posts.id = l.posts_id WHERE users.id = ${id} ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
       offset
     )}, ${dbCon.escape(limit)}`;
     let [result] = await conn.query(sql);
@@ -162,7 +162,53 @@ const getPostById = async (req, res) => {
     }
 
     //ini ngeloop comment yang di post
-    sql = `SELECT * FROM comments WHERE posts_id = ?`;
+    sql = `SELECT comment,posts_id, users_id, comments.createdAt, username, profilepic FROM comments JOIN users ON users_id = users.id WHERE posts_id = ?`;
+    for (let i = 0; i < result.length; i++) {
+      const element = result[i];
+      const [resultComments] = await conn.query(sql, element.id);
+
+      console.log("ini resultComments", resultComments);
+      result[i] = { ...result[i], comments: resultComments };
+    }
+
+    // total posts
+    sql = `SELECT COUNT(*) as total_posts FROM posts`;
+    let [totalPosts] = await conn.query(sql);
+
+    console.log("iniresult", result);
+    conn.release();
+    res.set("x-total-count", totalPosts[0].total_posts);
+    return res.status(200).send(result);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+// get post by Post id
+const getPostByPostId = async (req, res) => {
+  let conn, sql;
+  let { id } = req.user;
+  let { postId } = req.query;
+
+  // jadiin INT
+  try {
+    conn = await dbCon.promise().getConnection();
+    // ini ngeGet table posts && users && likes && kasih limit
+    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, if(id_like is null, 0, 1) as already_like, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes FROM posts INNER JOIN users ON posts.users_id = users.id LEFT JOIN (SELECT id as id_like, posts_id FROM likes WHERE users_id = ${id}) as l ON posts.id = l.posts_id WHERE posts.id = ${postId}`;
+    let [result] = await conn.query(sql);
+
+    // ini ngeloop image yang di upload
+    sql = `SELECT * FROM posts_images WHERE posts_id = ?`;
+    for (let i = 0; i < result.length; i++) {
+      const element = result[i];
+      const [resultImage] = await conn.query(sql, element.id);
+
+      console.log("ini resultImage", resultImage);
+      result[i] = { ...result[i], photos: resultImage };
+    }
+
+    //ini ngeloop comment yang di post
+    sql = `SELECT comment,posts_id, users_id, comments.createdAt, username, profilepic FROM comments JOIN users ON users_id = users.id WHERE posts_id = ? ORDER BY comments.createdAt DESC`;
     for (let i = 0; i < result.length; i++) {
       const element = result[i];
       const [resultComments] = await conn.query(sql, element.id);
@@ -277,8 +323,9 @@ const likepost = async (req, res) => {
 
     const [resultLike] = await conn.query(sql, inputData);
     conn.release();
-    return res.status(200).send({ message: "Liked!" }, resultLike);
+    return res.status(200).send({ message: "Liked!" });
   } catch (error) {
+    console.log(error);
     return res.status(500).send({ message: error.message || error });
   }
 };
@@ -302,8 +349,9 @@ const commentpost = async (req, res) => {
 
     const [result] = await conn.query(sql, inputComments);
     conn.release();
-    return res.status(200).send({ message: "comment successful" }, result);
+    return res.status(200).send({ message: "comment successful" });
   } catch (error) {
+    console.log(error);
     return res.status(500).send({ message: error.message || error });
   }
 };
@@ -378,7 +426,7 @@ const editpost = async (req, res) => {
       throw { message: "ini bukan post anda!" };
     }
 
-    sql = `UPDATE post set ? WHERE id = ?`;
+    sql = `UPDATE posts set ? WHERE id = ?`;
     let inputCaption = {
       caption,
     };
@@ -402,4 +450,5 @@ module.exports = {
   cek,
   editcomment,
   editpost,
+  getPostByPostId,
 };

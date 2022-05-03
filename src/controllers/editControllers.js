@@ -100,7 +100,7 @@ const deleteProfilePicture = async (req, res) => {
     sql = `SELECT profilepic FROM users WHERE id = ?`;
     let [haveProfilepic] = await conn.query(sql, id);
 
-    if (haveProfilepic) {
+    if (!haveProfilepic.length) {
       throw { message: "you already dont have an avatar!" };
     }
 
