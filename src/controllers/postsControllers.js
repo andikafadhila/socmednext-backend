@@ -340,6 +340,10 @@ const commentpost = async (req, res) => {
   try {
     conn = await dbCon.promise().getConnection();
 
+    if (comment.length > 300) {
+      throw { message: "Maximum character allowed is 300." };
+    }
+
     sql = `INSERT INTO comments set ?`;
     let inputComments = {
       users_id: id,
