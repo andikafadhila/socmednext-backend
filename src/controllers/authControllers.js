@@ -1,11 +1,16 @@
 const { createJwtAccess, createJwtemail } = require("../lib/jwt");
-const { registerService, loginService } = require("../services/authService");
+const {
+  registerService,
+  loginService,
+  forgetPasswordService,
+} = require("../services/authService");
 const { dbCon } = require("./../connections");
 const transporter = require("./../lib/transporter");
 const handlebars = require("handlebars");
 const myCache = require("./../lib/cache");
 const path = require("path");
 const fs = require("fs");
+const hashPass = require("../lib/hashPass");
 
 // register
 const register = async (req, res) => {
@@ -59,6 +64,85 @@ const register = async (req, res) => {
   }
 };
 // register
+
+// Forget Password send email
+const sendEmailForgetPassword = async (req, res) => {
+  try {
+    const { data: userData } = await forgetPasswordService(req.body);
+
+    let timeCreated = new Date().getTime();
+
+    const dataToken = {
+      id: userData.id,
+      username: userData.username,
+      timeCreated,
+    };
+
+    let cached = myCache.set(userData.id, dataToken, 5 * 60);
+    if (!cached) {
+      throw { message: "error caching" };
+    }
+
+    const tokenAccess = createJwtAccess(dataToken);
+    const tokenEmail = createJwtemail(dataToken);
+
+    const host =
+      process.env.NODE_ENV === "production"
+        ? "http://namadomainfe"
+        : "http://localhost:3000";
+    const link = `${host}/changepassword/${tokenEmail}`;
+
+    // let filepath = path.resolve(__dirname, "../template/emailTemplate.html");
+    let htmlString = fs.readFileSync(
+      "D:/Dev/Purwadhika/TA/socialmediaappbe/template/indexCopy.html",
+      "utf-8"
+    );
+
+    const template = handlebars.compile(htmlString);
+    const htmlToEmail = template({
+      username: userData.username,
+      link,
+    });
+
+    transporter.sendMail({
+      from: "PhotoLab <andikarfadhila@gmail.com>",
+      to: userData.email,
+      subject: "please click the link to verified your account",
+      html: htmlToEmail,
+    });
+    res.set("x-token-access", tokenAccess);
+    return res.status(200).send(userData);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+// Forget Password send email
+
+// Reset Password
+const resetPassword = async (req, res) => {
+  let conn, sql;
+  const { id } = req.body;
+  const { newPassword } = req.body;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `SELECT password FROM users WHERE id = ?`;
+    let [result] = await conn.query(sql, id);
+    let pass = hashPass(newPassword);
+    console.log(pass);
+    console.log(result[0].password);
+    if (pass == result[0].password) {
+      throw { message: "Cannot use initial password." };
+    }
+
+    conn.commit();
+    return res.status(200).send(result);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+// Reset Password
 
 // get username
 const getusername = async (req, res, next) => {
@@ -230,4 +314,6 @@ module.exports = {
   keeplogin,
   accountVerified,
   sendEmailVerified,
+  sendEmailForgetPassword,
+  resetPassword,
 };

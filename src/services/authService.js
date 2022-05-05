@@ -82,7 +82,41 @@ const registerService = async (data) => {
 };
 // register Service
 
+// Forget Password Service
+const forgetPasswordService = async (data) => {
+  let conn;
+  let sql;
+  let { email } = data;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+    sql = `SELECT id FROM users WHERE email = ?`;
+
+    let [result] = await conn.query(sql, [email]);
+    if (!result.length) {
+      throw { message: "User not found!" };
+    }
+
+    sql = `select id,username,isVerified,email from users where email = ?`;
+    let [userData] = await conn.query(sql, [email]);
+    console.log("userData", userData);
+    await conn.commit();
+    conn.release();
+    return { success: true, data: userData[0] };
+  } catch (error) {
+    conn.rollback();
+    conn.release();
+    console.log(error);
+    // return Error(error.message || error);
+    throw new Error(error.message || error);
+    // return { success: false, message: error.message || error };
+  }
+};
+
 module.exports = {
   loginService,
   registerService,
+  forgetPasswordService,
 };

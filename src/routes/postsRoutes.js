@@ -13,6 +13,7 @@ const {
   getPostById,
   getPostByPostId,
   editpost,
+  getPostByAlreadyLiked,
 } = require("../controllers/postsControllers");
 
 const upload = require("../lib/upload");
@@ -23,6 +24,11 @@ const uploader = upload("/image", "POSTIMAGE").fields([
 Router.get("/get-post", verifyTokenAccess, getpost);
 Router.get("/get-post-byId", verifyTokenAccess, getPostById);
 Router.get("/get-post-byPostId", verifyTokenAccess, getPostByPostId);
+Router.get(
+  "/get-post-byAlreadyLiked",
+  verifyTokenAccess,
+  getPostByAlreadyLiked
+);
 Router.post("/", verifyTokenAccess, uploader, postImage);
 Router.post("/like-post", verifyTokenAccess, likepost);
 Router.post("/comment-post", verifyTokenAccess, commentpost);
