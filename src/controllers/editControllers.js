@@ -31,7 +31,9 @@ const updateBio = async (req, res) => {
     let [result] = await conn.query(sql, [editData, id]);
     conn.commit();
     conn.release();
-    return res.status(200).send({ message: "success change profile data" });
+    return res
+      .status(200)
+      .send({ message: "success change profile data", editData });
   } catch (error) {
     conn.release();
     console.log(error);
@@ -82,7 +84,7 @@ const updateProfilePicture = async (req, res) => {
     // if(imagePath){
     //   ./public + result[0].pro
     // }
-    return res.status(200).send({ message: "berhasil di upload" });
+    return res.status(200).send({ message: "berhasil di upload", imagePath });
   } catch (error) {
     console.log(error);
     return res.status(500).send({ message: error.message || error });

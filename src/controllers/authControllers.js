@@ -17,12 +17,12 @@ const register = async (req, res) => {
   try {
     const { data: userData } = await registerService(req.body);
 
-    let timeCreated = new Date().getTime();
+    let timecreated = new Date().getTime();
 
     const dataToken = {
       id: userData.id,
       username: userData.username,
-      timeCreated,
+      timecreated,
     };
 
     let cached = myCache.set(userData.id, dataToken, 5 * 60);
@@ -70,12 +70,12 @@ const sendEmailForgetPassword = async (req, res) => {
   try {
     const { data: userData } = await forgetPasswordService(req.body);
 
-    let timeCreated = new Date().getTime();
+    let timecreated = new Date().getTime();
 
     const dataToken = {
       id: userData.id,
       username: userData.username,
-      timeCreated,
+      timecreated,
     };
 
     let cached = myCache.set(userData.id, dataToken, 5 * 60);
@@ -121,7 +121,7 @@ const sendEmailForgetPassword = async (req, res) => {
 // Reset Password
 const resetPassword = async (req, res) => {
   let conn, sql;
-  const { id } = req.body;
+  const { id } = req.user;
   const { newPassword } = req.body;
 
   try {
@@ -129,15 +129,20 @@ const resetPassword = async (req, res) => {
 
     sql = `SELECT password FROM users WHERE id = ?`;
     let [result] = await conn.query(sql, id);
-    let pass = hashPass(newPassword);
-    console.log(pass);
-    console.log(result[0].password);
-    if (pass == result[0].password) {
+    let newPass = hashPass(newPassword);
+
+    if (newPass == result[0].password) {
       throw { message: "Cannot use initial password." };
     }
 
+    sql = `UPDATE users set ? WHERE id = ?`;
+    let insertNewPass = {
+      password: newPass,
+    };
+    let [result2] = await conn.query(sql, [insertNewPass, id]);
+
     conn.commit();
-    return res.status(200).send(result);
+    return res.status(200).send({ message: "Reset Password Success!" });
   } catch (error) {
     return res.status(500).send({ message: error.message || error });
   }
@@ -255,24 +260,47 @@ const accountVerified = async (req, res) => {
 };
 // account Verified
 
+// get user data
+const getUserData = async (req, res) => {
+  const { id } = req.user;
+  let conn;
+  let sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `SELECT id,username,isVerified,email FROM users WHERE id = ?`;
+    let [result] = await conn.query(sql, id);
+    conn.release();
+    return res.status(200).send(result[0]);
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+// get user data
+
 // send Email Verified
 const sendEmailVerified = async (req, res) => {
   const { id, email, username } = req.body;
   try {
     let timecreated = new Date().getTime();
+
     const dataToken = {
       id: id,
       username: username,
       timecreated,
     };
 
-    let berhasil = myCache.set(id, dataToken, 5 * 60);
-    if (!berhasil) {
+    let cached = myCache.set(id, dataToken, 5 * 60);
+    if (!cached) {
       throw { message: "error caching" };
     }
 
+    const tokenAccess = createJwtAccess(dataToken);
     const tokenEmail = createJwtemail(dataToken);
-    //?kirim email verifikasi
+
     const host =
       process.env.NODE_ENV === "production"
         ? "http://namadomainfe"
@@ -280,28 +308,27 @@ const sendEmailVerified = async (req, res) => {
     const link = `${host}/verified/${tokenEmail}`;
 
     // let filepath = path.resolve(__dirname, "../template/emailTemplate.html");
-
     let htmlString = fs.readFileSync(
-      "D:/Dev/Purwadhika/TA/socialmediaappbe/template/emailTemplate.html",
+      "D:/Dev/Purwadhika/TA/socialmediaappbe/template/indexCopy.html",
       "utf-8"
     );
-    console.log(htmlString);
+
     const template = handlebars.compile(htmlString);
     const htmlToEmail = template({
       username: username,
       link,
     });
-    console.log(htmlToEmail);
-    await transporter.sendMail({
-      from: "Hokage <andikarfadhila@gmail.com>",
+
+    transporter.sendMail({
+      from: "PhotoLab <andikarfadhila@gmail.com>",
       to: email,
       subject: "please click the link to verified your account",
       html: htmlToEmail,
     });
-    return res.status(200).send({ message: "berhasil kirim email lagi99x" });
+    res.set("x-token-access", tokenAccess);
+    return res.status(200).send(id, email, username);
   } catch (error) {
-    console.log(error);
-    return res.status(200).send({ message: error.message || error });
+    return res.status(500).send({ message: error.message || error });
   }
 };
 // send Email Verified
@@ -316,4 +343,5 @@ module.exports = {
   sendEmailVerified,
   sendEmailForgetPassword,
   resetPassword,
+  getUserData,
 };

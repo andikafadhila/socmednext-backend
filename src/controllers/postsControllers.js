@@ -248,8 +248,8 @@ const getPostByAlreadyLiked = async (req, res) => {
 // get post by Post id
 const getPostByPostId = async (req, res) => {
   let conn, sql;
-  let { id } = req.user;
-  let { postId } = req.query;
+  // let { id } = req.user;
+  let { postId, id } = req.query;
 
   // jadiin INT
   try {

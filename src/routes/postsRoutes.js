@@ -23,7 +23,7 @@ const uploader = upload("/image", "POSTIMAGE").fields([
 
 Router.get("/get-post", verifyTokenAccess, getpost);
 Router.get("/get-post-byId", verifyTokenAccess, getPostById);
-Router.get("/get-post-byPostId", verifyTokenAccess, getPostByPostId);
+Router.get("/get-post-byPostId", getPostByPostId);
 Router.get(
   "/get-post-byAlreadyLiked",
   verifyTokenAccess,

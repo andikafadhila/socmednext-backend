@@ -6,7 +6,7 @@ const createJwtAccess = (data) => {
 };
 const createJwtemail = (data) => {
   //   email token
-  return jwt.sign(data, process.env.JWT_SECRET, { expiresIn: "5m" });
+  return jwt.sign(data, process.env.JWT_SECRET, { expiresIn: "1 days" });
 };
 
 module.exports = {

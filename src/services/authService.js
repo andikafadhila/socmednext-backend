@@ -12,17 +12,30 @@ const loginService = async (data) => {
 
     password = hashPass(password);
 
-    sql = `SELECT * FROM users WHERE (username = ? or email = ?) and password = ?`;
-    let [result] = await conn.query(sql, [username, email, password]);
+    sql = `SELECT * FROM users WHERE username = ? or email = ?`;
+    let [result1] = await conn.query(sql, [username, email]);
 
-    console.log(result);
-
-    if (!result.length) {
-      throw { message: "User not found." };
+    if (!result1.length) {
+      throw {
+        message:
+          "The username you entered doesn't belong to an account. Please check your username and try again.",
+      };
     }
 
+    sql = `SELECT * FROM users WHERE (username = ? or email = ?) and password = ?`;
+    let [result2] = await conn.query(sql, [username, email, password]);
+
+    if (!result2.length) {
+      throw {
+        message:
+          "Sorry, your password was incorrect. Please double-check your password.",
+      };
+    }
+
+    console.log(result2);
+
     conn.release();
-    return { success: true, data: result[0] };
+    return { success: true, data: result2[0] };
   } catch (error) {
     conn.release();
     console.log(error);
@@ -90,7 +103,7 @@ const forgetPasswordService = async (data) => {
 
   try {
     conn = await dbCon.promise().getConnection();
-
+    console.log(email);
     await conn.beginTransaction();
     sql = `SELECT id FROM users WHERE email = ?`;
 

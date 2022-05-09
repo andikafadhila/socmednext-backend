@@ -5,6 +5,7 @@ const {
   getemail,
   sendEmailForgetPassword,
   resetPassword,
+  getUserData,
 } = require("../controllers/authControllers");
 const { verifyTokenAccess, verifyTokenEmail } = require("../lib/verifyToken");
 const Router = express.Router();
@@ -21,7 +22,7 @@ Router.get("/keeplogin", verifyTokenAccess, keeplogin);
 Router.get("/verified", verifyTokenEmail, verifyLastToken, accountVerified);
 Router.post("/sendemail-verified", sendEmailVerified);
 Router.post("/sendemail-forgetpassword", sendEmailForgetPassword);
-Router.get("/reset-password", verifyTokenEmail, verifyLastToken);
-Router.get("/newpassword", resetPassword);
+Router.get("/reset-password", verifyTokenEmail, getUserData);
+Router.post("/newpassword", verifyTokenEmail, resetPassword);
 
 module.exports = Router;
