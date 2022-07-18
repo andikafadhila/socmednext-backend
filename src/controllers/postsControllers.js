@@ -13,6 +13,7 @@ const postImage = async (req, res) => {
   const { image } = req.files;
   console.log("image", image);
   console.log("caption", caption);
+
   const imagearrpath = image
     ? image.map((val) => {
         return `${jalur}/${val.filename}`;
@@ -21,14 +22,16 @@ const postImage = async (req, res) => {
 
   console.log("ini imagearrpath", imagearrpath);
 
-  if (!image) {
-    return res.status(500).send({ message: "foto tidak ada" });
-  }
-
   try {
     conn = await dbCon.promise().getConnection();
 
     await conn.beginTransaction();
+    if (caption.length == 0) {
+      throw { message: "Caption cannot blank!" };
+    }
+    if (!image) {
+      throw { message: "Must upload at least one image!" };
+    }
     // insert into posts table
     sql = `INSERT INTO posts SET ?`;
     let datacaption = {
@@ -52,8 +55,7 @@ const postImage = async (req, res) => {
       await conn.query(sql, insertDataImage);
     }
 
-    conn.commit();
-    conn.release();
+    await conn.commit();
     return res.status(200).send({ message: "berhasil di upload" });
   } catch (error) {
     console.log(error);
@@ -65,6 +67,8 @@ const postImage = async (req, res) => {
       }
     }
     return res.status(500).send({ message: error.message || error });
+  } finally {
+    conn.release();
   }
 };
 
@@ -88,7 +92,9 @@ const getpost = async (req, res) => {
   try {
     conn = await dbCon.promise().getConnection();
     // ini ngeGet table posts && users && likes && kasih limit
-    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, if(id_like is null, 0, 1) as already_like, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id LEFT JOIN (SELECT id as id_like, posts_id FROM likes WHERE users_id = ${id}) as l ON posts.id = l.posts_id ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
+    sql = `select posts.id,caption,username,users_id,profilepic,posts.createdAt, if(id_like is null, 0, 1) as already_like, (SELECT count(*) FROM likes WHERE posts_id = posts.id) as number_of_likes from posts INNER JOIN users ON posts.users_id = users.id LEFT JOIN (SELECT id as id_like, posts_id FROM likes WHERE users_id = ${dbCon.escape(
+      id
+    )}) as l ON posts.id = l.posts_id ORDER BY posts.createdAt DESC LIMIT ${dbCon.escape(
       offset
     )}, ${dbCon.escape(limit)}`;
     let [result] = await conn.query(sql);
@@ -342,14 +348,14 @@ const deletepost = async (req, res) => {
       }
     }
 
-    conn.release();
-    conn.commit();
+    await conn.commit();
     return res.status(200).send({ message: "successfull to delete post" });
   } catch (error) {
     conn.rollback();
-    conn.release();
     console.log(error);
     return res.status(500).send({ message: error.message || error });
+  } finally {
+    conn.release();
   }
 };
 
@@ -387,6 +393,7 @@ const likepost = async (req, res) => {
     return res.status(200).send({ message: "Liked!" });
   } catch (error) {
     console.log(error);
+    conn.release();
     return res.status(500).send({ message: error.message || error });
   }
 };
@@ -405,6 +412,10 @@ const commentpost = async (req, res) => {
       throw { message: "Maximum character allowed is 300." };
     }
 
+    if (comment.length == 0) {
+      throw { message: "Please input your comment." };
+    }
+
     sql = `INSERT INTO comments set ?`;
     let inputComments = {
       users_id: id,
@@ -413,11 +424,12 @@ const commentpost = async (req, res) => {
     };
 
     const [result] = await conn.query(sql, inputComments);
-    conn.release();
     return res.status(200).send({ message: "comment successful" });
   } catch (error) {
     console.log(error);
     return res.status(500).send({ message: error.message || error });
+  } finally {
+    conn.release();
   }
 };
 

@@ -75,19 +75,20 @@ const updateProfilePicture = async (req, res) => {
   console.log(req.file);
 
   try {
-    conn = await dbCon.promise();
+    conn = await dbCon.promise().getConnection();
     // select data user dulu untuk dapetin path lamanya
     sql = `UPDATE users SET profilepic = ? WHERE id = ?`;
     let [result] = await conn.query(sql, [imagePath, id]);
     console.log(result);
-    fs.unlinkSync;
-    // if(imagePath){
-    //   ./public + result[0].pro
-    // }
+    if (imagePath) {
+      fs.unlinkSync(`./public` + result[0].profilepic);
+    }
     return res.status(200).send({ message: "berhasil di upload", imagePath });
   } catch (error) {
     console.log(error);
     return res.status(500).send({ message: error.message || error });
+  } finally {
+    conn.release();
   }
 };
 
